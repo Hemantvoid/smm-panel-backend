@@ -81,7 +81,7 @@ public class AuthController {
         user.setUsername(req.getUsername());
         user.setPassword(passwordEncoder.encode(req.getPassword()));
         user.setRole("ROLE_USER");
-		user.setEmail(req.getEmail());
+		// user.setEmail(req.getEmail());
 
         userRepo.save(user);
 
