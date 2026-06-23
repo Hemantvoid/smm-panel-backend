@@ -12,6 +12,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import com.example.demo.security.JwtFilter;
 import com.example.demo.security.OAuthSuccessHandler;
 
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
 @Configuration
 public class SecurityConfig {
 
@@ -26,6 +30,35 @@ public class SecurityConfig {
     public BCryptPasswordEncoder passwordEncoder()	{
     	return new BCryptPasswordEncoder();
     }
+
+@Bean
+public CorsConfigurationSource corsConfigurationSource() {
+
+    CorsConfiguration config = new CorsConfiguration();
+
+    config.setAllowedOrigins(List.of(
+            "https://smmlover.in",
+            "https://www.smmlover.in"
+    ));
+
+    config.setAllowedMethods(List.of(
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "OPTIONS"
+    ));
+
+    config.setAllowedHeaders(List.of("*"));
+    config.setAllowCredentials(true);
+
+    UrlBasedCorsConfigurationSource source =
+            new UrlBasedCorsConfigurationSource();
+
+    source.registerCorsConfiguration("/**", config);
+
+    return source;
+}
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -80,5 +113,7 @@ public class SecurityConfig {
 
         	).build();
     }
+
+    
     
 }
