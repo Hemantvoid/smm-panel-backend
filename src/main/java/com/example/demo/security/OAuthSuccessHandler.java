@@ -70,7 +70,7 @@ implements AuthenticationSuccessHandler {
 
         response.sendRedirect(
 
-                "http://localhost:5173/oauth-success?token="
+                "http://smmlover.in/oauth-success?token="
 
                         + token +
 
