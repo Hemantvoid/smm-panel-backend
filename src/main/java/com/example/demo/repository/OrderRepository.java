@@ -53,7 +53,8 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long> {
 	    List<Object[]> getProviderStats();
 	    Page<OrderEntity> findByCustomerName(String customerName, Pageable pageable);
 	long countByProvider(Provider provider);
-	
+
+	List<OrderEntity> findByStatusIn(List<String> statuses);
 	List<OrderEntity> findByProviderAndStatusIn(
         Provider provider,
         List<String> statuses
