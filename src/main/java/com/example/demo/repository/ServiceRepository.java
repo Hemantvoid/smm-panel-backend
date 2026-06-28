@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.example.demo.model.ServiceEntity;
 
 public interface ServiceRepository extends JpaRepository<ServiceEntity, Long>{
+	void deleteByProvider(Provider provider);
+	List<ServiceEntity> findByProvider(Provider provider);
 	List<ServiceEntity> findByProviderId(Long providerId);
 	List<ServiceEntity> findByActiveTrue();
 	List<ServiceEntity> findByNameContainingIgnoreCase(String name);
