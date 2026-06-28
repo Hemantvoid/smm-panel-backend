@@ -59,3 +59,4 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long> {
         Provider provider,
         List<String> statuses
 );
+}
