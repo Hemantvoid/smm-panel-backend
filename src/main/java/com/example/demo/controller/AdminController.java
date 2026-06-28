@@ -143,9 +143,31 @@ public class AdminController {
     // =========================
     // ❌ DELETE SERVICE
     // =========================
-    @DeleteMapping("/services/{id}")
-    public void deleteService(@PathVariable Long id) {
-        serviceRepo.deleteById(id);
+    @DeleteMapping("/providers/{id}")
+    public String deleteProvider(@PathVariable Long id) {
+
+        Provider provider = providerRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Provider not found"));
+
+        // Pending orders check
+        List<OrderEntity> pendingOrders = orderRepo.findByProviderAndStatusIn(
+                provider,
+                List.of("PENDING", "PROCESSING", "UNKNOWN")
+        );
+
+        if (!pendingOrders.isEmpty()) {
+            throw new RuntimeException(
+                    "Provider has pending orders. Delete not allowed."
+            );
+        }
+
+        // Delete services
+        serviceRepo.deleteByProvider(provider);
+
+        // Delete provider
+        providerRepo.delete(provider);
+
+        return "Provider deleted successfully";
     }
 
     // =========================
