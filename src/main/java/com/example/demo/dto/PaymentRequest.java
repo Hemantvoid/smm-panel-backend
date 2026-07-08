@@ -2,16 +2,13 @@ package com.example.demo.dto;
 
 public class PaymentRequest {
 
-    private String razorpayOrderId;
-    private String razorpayPaymentId;
-    private String razorpaySignature;
+    private String clientTxnId;
 
-    public String getRazorpayOrderId() { return razorpayOrderId; }
-    public void setRazorpayOrderId(String razorpayOrderId) { this.razorpayOrderId = razorpayOrderId; }
+    public String getClientTxnId() {
+        return clientTxnId;
+    }
 
-    public String getRazorpayPaymentId() { return razorpayPaymentId; }
-    public void setRazorpayPaymentId(String razorpayPaymentId) { this.razorpayPaymentId = razorpayPaymentId; }
-
-    public String getRazorpaySignature() { return razorpaySignature; }
-    public void setRazorpaySignature(String razorpaySignature) { this.razorpaySignature = razorpaySignature; }
+    public void setClientTxnId(String clientTxnId) {
+        this.clientTxnId = clientTxnId;
+    }
 }
