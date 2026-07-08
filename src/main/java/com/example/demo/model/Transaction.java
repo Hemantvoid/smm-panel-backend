@@ -18,6 +18,16 @@ public class Transaction {
     private String description;
 
     private String status;
+    
+    private String clientTxnId;
+
+    private String gatewayTxnId;
+
+    private String paymentUrl;
+
+    private String qrCode;
+
+    private String paymentMode;
 
 	public Long getId() {
 		return id;
@@ -65,6 +75,46 @@ public class Transaction {
 
 	public void setStatus(String status) {
 		this.status = status;
+	}
+
+	public String getClientTxnId() {
+		return clientTxnId;
+	}
+
+	public void setClientTxnId(String clientTxnId) {
+		this.clientTxnId = clientTxnId;
+	}
+
+	public String getGatewayTxnId() {
+		return gatewayTxnId;
+	}
+
+	public void setGatewayTxnId(String gatewayTxnId) {
+		this.gatewayTxnId = gatewayTxnId;
+	}
+
+	public String getPaymentUrl() {
+		return paymentUrl;
+	}
+
+	public void setPaymentUrl(String paymentUrl) {
+		this.paymentUrl = paymentUrl;
+	}
+
+	public String getQrCode() {
+		return qrCode;
+	}
+
+	public void setQrCode(String qrCode) {
+		this.qrCode = qrCode;
+	}
+
+	public String getPaymentMode() {
+		return paymentMode;
+	}
+
+	public void setPaymentMode(String paymentMode) {
+		this.paymentMode = paymentMode;
 	}
 
    
