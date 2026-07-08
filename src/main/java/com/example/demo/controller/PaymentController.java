@@ -1,31 +1,38 @@
 package com.example.demo.controller;
 
-import com.example.demo.dto.PaymentRequest;
-import com.example.demo.service.PaymentService;
+import java.security.Principal;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-@CrossOrigin("*")
+import com.example.demo.dto.PaymentRequest;
+import com.example.demo.service.PaymentService;
+
 @RestController
 @RequestMapping("/payment")
+@CrossOrigin("*")
 public class PaymentController {
 
     @Autowired
     private PaymentService paymentService;
 
     @PostMapping("/create-order")
-    public String createOrder(@RequestParam double amount) throws Exception {
-        return paymentService.createOrder(amount);
+    public Map<String, Object> createOrder(@RequestParam Double amount,
+                                           Principal principal) {
+
+        return paymentService.createOrder(amount, principal.getName());
+
     }
 
-    // 🔥 THIS WAS MISSING
     @PostMapping("/verify")
-    public String verifyPayment(@RequestBody PaymentRequest request,
-                                Authentication auth) throws Exception {
+    public String verify(@RequestBody PaymentRequest request,
+                         Principal principal) {
 
-        String username = auth.getName();
+        return paymentService.verifyPayment(
+                request.getClientTxnId(),
+                principal.getName());
 
-        return paymentService.verifyPayment(request, username);
     }
+
 }
