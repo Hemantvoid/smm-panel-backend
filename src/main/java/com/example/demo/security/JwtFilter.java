@@ -39,6 +39,9 @@ if (
     path.equals("/auth/login")
     || path.equals("/auth/register")
     || path.equals("/auth/test")
+    || path.equals("/sitemap.xml")
+    || path.equals("/api/blog")
+    || path.startsWith("/api/blog/")
 ) {
 
     filterChain.doFilter(request, response);
