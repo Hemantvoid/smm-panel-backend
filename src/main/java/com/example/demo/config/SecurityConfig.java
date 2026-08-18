@@ -85,9 +85,12 @@ public CorsConfigurationSource corsConfigurationSource() {
             			    "/auth/forgot-password",
             			    "/auth/verify-otp",
             			    "/auth/reset-password",
-            			    "/swagger-ui/**",
-            		        "/v3/api-docs/**",
-            		        "/swagger-ui.html"
+                            "/api/blog",
+            			    "/api/blog/**",
+            			    "/sitemap.xml"
+            			    // "/swagger-ui/**",
+            		     //    "/v3/api-docs/**",
+            		     //    "/swagger-ui.html"
             			).permitAll()
 
                 // 🔒 ADMIN ONLY
