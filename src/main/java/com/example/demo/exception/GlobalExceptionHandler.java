@@ -168,4 +168,40 @@ public class GlobalExceptionHandler {
                 HttpStatus.INTERNAL_SERVER_ERROR
         );
     }
+    // =========================
+ // DUPLICATE RESOURCE
+ // =========================
+ @ExceptionHandler(DuplicateResourceException.class)
+ public ResponseEntity<Map<String, Object>> handleDuplicate(
+         DuplicateResourceException ex
+ ) {
+
+     Map<String, Object> error =
+             new HashMap<>();
+
+     error.put(
+             "timestamp",
+             LocalDateTime.now()
+     );
+
+     error.put(
+             "status",
+             409
+     );
+
+     error.put(
+             "error",
+             "Conflict"
+     );
+
+     error.put(
+             "message",
+             ex.getMessage()
+     );
+
+     return new ResponseEntity<>(
+             error,
+             HttpStatus.CONFLICT
+     );
+ }
 }
