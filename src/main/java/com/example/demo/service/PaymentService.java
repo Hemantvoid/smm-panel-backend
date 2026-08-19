@@ -1,38 +1,38 @@
-package com.example.demo.service;
+// package com.example.demo.service;
 
-import com.example.demo.dto.PaymentRequest;
-import com.example.demo.model.Transaction;
-import com.example.demo.model.User;
-import com.example.demo.repository.TransactionRepository;
-import com.example.demo.repository.UserRepository;
-import com.razorpay.*;
+// import com.example.demo.dto.PaymentRequest;
+// import com.example.demo.model.Transaction;
+// import com.example.demo.model.User;
+// import com.example.demo.repository.TransactionRepository;
+// import com.example.demo.repository.UserRepository;
+// import com.razorpay.*;
 
-import org.json.JSONObject;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+// import org.json.JSONObject;
+// import org.springframework.beans.factory.annotation.Autowired;
+// import org.springframework.beans.factory.annotation.Value;
+// import org.springframework.stereotype.Service;
+// import org.springframework.transaction.annotation.Transactional;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Map;
+// import javax.crypto.Mac;
+// import javax.crypto.spec.SecretKeySpec;
+// import java.util.Base64;
+// import java.util.HashMap;
+// import java.util.Map;
 
-@Service
-public class PaymentService {
+// @Service
+// public class PaymentService {
 
-    @Autowired
-    private TransactionRepository transactionRepo;
+//     @Autowired
+//     private TransactionRepository transactionRepo;
 
-    @Autowired
-    private UserRepository userRepo;
+//     @Autowired
+//     private UserRepository userRepo;
 
-    // 🔐 Move keys to application.properties
-    @Value("${razorpay.key}")
-    private String KEY;
+//     // 🔐 Move keys to application.properties
+//     @Value("${razorpay.key}")
+//     private String KEY;
 
-    @Value("${razorpay.secret}")package com.example.demo.service;
+//     @Value("${razorpay.secret}")package com.example.demo.service;
 
 import com.example.demo.dto.PaymentRequest;
 import com.example.demo.model.Transaction;
