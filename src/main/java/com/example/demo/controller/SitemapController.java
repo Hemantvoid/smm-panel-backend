@@ -3,6 +3,9 @@ package com.example.demo.controller;
 import com.example.demo.dto.BlogPostResponse;
 import com.example.demo.service.BlogPostService;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,6 +21,9 @@ public class SitemapController {
     public SitemapController(BlogPostService blogPostService) {
         this.blogPostService = blogPostService;
     }
+
+    private static final DateTimeFormatter SITEMAP_DATE_FORMAT =
+        DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     @GetMapping(
     	    value = "/sitemap.xml",
@@ -84,23 +90,23 @@ public class SitemapController {
 
             if (post.getUpdatedAt() != null) {
 
-                sitemap.append("<lastmod>");
-                sitemap.append(
-                        post.getUpdatedAt()
-                );
-                sitemap.append("</lastmod>");
+    sitemap.append("<lastmod>");
+    sitemap.append(
+            post.getUpdatedAt()
+                    .format(SITEMAP_DATE_FORMAT)
+    );
+    sitemap.append("</lastmod>");
 
-            } else if (
-                    post.getPublishedAt() != null
-            ) {
+} else if (post.getPublishedAt() != null) {
 
-                sitemap.append("<lastmod>");
-                sitemap.append(
-                        post.getPublishedAt()
-                );
-                sitemap.append("</lastmod>");
+    sitemap.append("<lastmod>");
+    sitemap.append(
+            post.getPublishedAt()
+                    .format(SITEMAP_DATE_FORMAT)
+    );
+    sitemap.append("</lastmod>");
 
-            }
+}
 
             sitemap.append("</url>");
         }
