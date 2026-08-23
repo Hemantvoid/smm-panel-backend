@@ -1,243 +1,155 @@
 package com.example.demo.service;
 
+import com.example.demo.dto.PaymentRequest;
+import com.example.demo.model.Transaction;
 import com.example.demo.model.User;
-import com.example.demo.model.WalletRequest;
+import com.example.demo.repository.TransactionRepository;
 import com.example.demo.repository.UserRepository;
-import com.example.demo.repository.WalletRequestRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
-import java.util.List;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class PaymentService {
 
     @Autowired
-    private UserRepository userRepo;
+    private TransactionRepository transactionRepo;
+    
+    @Autowired
+    private RestTemplate restTemplate;
 
     @Autowired
-    private WalletRequestRepository walletRequestRepo;
+    private UserRepository userRepo;
 
+    // 🔐 Move keys to application.properties
+    @Value("${upi.key}")
+    private String apiKey;
 
-    // =========================================================
-    // CREATE MANUAL PAYMENT REQUEST
-    // =========================================================
+    @Value("${upi.base-url}")
+    private String baseUrl;
 
-    public WalletRequest createPaymentRequest(
-            String username,
-            double amount,
-            String utr
-    ) {
+    // 🔥 store orderId → amount mapping (temporary in-memory)
+    private Map<String, Double> orderAmountMap = new HashMap<>();
 
-        // -----------------------------------------------------
-        // Validate amount
-        // -----------------------------------------------------
+    // ===========================
+    // 🔥 CREATE ORDER
+    // ===========================
+    public Map<String,Object> createOrder(Double amount,String username){
 
-        if (amount <= 0) {
-            throw new RuntimeException("Invalid amount");
-        }
+        User user=userRepo.findByUsername(username)
+                .orElseThrow(()->new RuntimeException("User not found"));
 
+        String clientTxnId="TXN"+System.currentTimeMillis();
 
-        // -----------------------------------------------------
-        // Validate UTR
-        // -----------------------------------------------------
+        Map<String,Object> body=new HashMap<>();
 
-        if (utr == null || utr.trim().isEmpty()) {
-            throw new RuntimeException("UTR is required");
-        }
+        body.put("key",apiKey);
+        body.put("client_txn_id",clientTxnId);
+        body.put("amount",amount.toString());
+        body.put("p_info","Wallet Recharge");
+        body.put("customer_name",user.getUsername());
+        body.put("customer_email",user.getEmail());
+        body.put("customer_mobile","9999999999");
+        body.put("redirect_url","https://smmlover.in/payment-success");
+        body.put("udf1","");
+        body.put("udf2","");
+        body.put("udf3","");
 
+        HttpHeaders headers=new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
 
-        // -----------------------------------------------------
-        // Get user
-        // -----------------------------------------------------
+        HttpEntity<Map<String,Object>> entity=
+                new HttpEntity<>(body,headers);
 
-        User user = userRepo.findByUsername(username)
-                .orElseThrow(
-                        () -> new RuntimeException("User not found")
+        ResponseEntity<Map> response=
+                restTemplate.postForEntity(
+                        baseUrl+"/create_order",
+                        entity,
+                        Map.class
                 );
 
+        return response.getBody();
 
-        // -----------------------------------------------------
-        // Create request
-        // -----------------------------------------------------
-
-        WalletRequest request = new WalletRequest();
-
-        request.setUsername(user.getUsername());
-        request.setAmount(amount);
-        request.setUtr(utr.trim());
-        request.setStatus("PENDING");
-
-
-        return walletRequestRepo.save(request);
     }
-
-
-    // =========================================================
-    // GET USER PAYMENT REQUESTS
-    // =========================================================
-
-    public List<WalletRequest> getUserRequests(
-            String username
-    ) {
-
-        return walletRequestRepo
-                .findByUsernameOrderByIdDesc(username);
-    }
-
-
-    // =========================================================
-    // GET ALL PAYMENT REQUESTS - ADMIN
-    // =========================================================
-
-    public List<WalletRequest> getAllRequests() {
-
-        return walletRequestRepo.findAllByOrderByIdDesc();
-    }
-
-
-    // =========================================================
-    // APPROVE PAYMENT REQUEST - ADMIN
-    // =========================================================
-
+    // ===========================
+    // 🔥 VERIFY PAYMENT
+    // ===========================
     @Transactional
-    public String approveRequest(Long requestId) {
+    public String verifyPayment(String clientTxnId,String username){
 
-        WalletRequest request =
-                walletRequestRepo.findById(requestId)
-                        .orElseThrow(
-                                () -> new RuntimeException(
-                                        "Payment request not found"
-                                )
-                        );
+        Map<String,Object> body=new HashMap<>();
 
+        body.put("key",apiKey);
+        body.put("client_txn_id",clientTxnId);
+        body.put("txn_date",
+                java.time.LocalDate.now()
+                        .format(java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy")));
 
-        // -----------------------------------------------------
-        // Prevent duplicate approval
-        // -----------------------------------------------------
+        HttpHeaders headers=new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
 
-        if ("APPROVED".equalsIgnoreCase(
-                request.getStatus()
-        )) {
+        HttpEntity<Map<String,Object>> entity=
+                new HttpEntity<>(body,headers);
 
-            throw new RuntimeException(
-                    "Payment request already approved"
-            );
-        }
-
-
-        // -----------------------------------------------------
-        // Don't approve rejected request
-        // -----------------------------------------------------
-
-        if ("REJECTED".equalsIgnoreCase(
-                request.getStatus()
-        )) {
-
-            throw new RuntimeException(
-                    "Rejected request cannot be approved"
-            );
-        }
-
-
-        // -----------------------------------------------------
-        // Get user
-        // -----------------------------------------------------
-
-        User user =
-                userRepo.findByUsername(
-                        request.getUsername()
-                )
-                .orElseThrow(
-                        () -> new RuntimeException(
-                                "User not found"
-                        )
+        ResponseEntity<Map> response=
+                restTemplate.postForEntity(
+                        baseUrl+"/check_order_status",
+                        entity,
+                        Map.class
                 );
 
+        Map result=response.getBody();
 
-        // -----------------------------------------------------
-        // CREDIT WALLET
-        // -----------------------------------------------------
+        if(result==null)
+            throw new RuntimeException("Gateway error");
 
-        double oldBalance =
-                user.getBalance();
+        Boolean status=(Boolean)result.get("status");
 
-        double newBalance =
-                oldBalance + request.getAmount();
+        if(status==null||!status)
+            throw new RuntimeException("Payment not found");
 
-        user.setBalance(newBalance);
+        Map data=(Map)result.get("data");
+
+        String paymentStatus=data.get("status").toString();
+
+        if(!paymentStatus.equalsIgnoreCase("success"))
+            throw new RuntimeException("Payment Pending");
+
+        Double amount=
+                Double.valueOf(data.get("amount").toString());
+
+        User user=userRepo.findByUsername(username)
+                .orElseThrow();
+
+        user.setBalance(user.getBalance()+amount);
 
         userRepo.save(user);
 
+        Transaction txn=new Transaction();
 
-        // -----------------------------------------------------
-        // UPDATE REQUEST STATUS
-        // -----------------------------------------------------
+        txn.setUsername(username);
+        txn.setAmount(amount);
+        txn.setType("CREDIT");
+        txn.setStatus("SUCCESS");
+        txn.setDescription("UPI Gateway Recharge");
 
-        request.setStatus("APPROVED");
+        transactionRepo.save(txn);
 
-        walletRequestRepo.save(request);
+        return "Wallet Updated";
 
-
-        return "Payment request approved and wallet credited";
     }
-
-
-    // =========================================================
-    // REJECT PAYMENT REQUEST - ADMIN
-    // =========================================================
-
-    @Transactional
-    public String rejectRequest(Long requestId) {
-
-        WalletRequest request =
-                walletRequestRepo.findById(requestId)
-                        .orElseThrow(
-                                () -> new RuntimeException(
-                                        "Payment request not found"
-                                )
-                        );
-
-
-        // -----------------------------------------------------
-        // Prevent changing approved request
-        // -----------------------------------------------------
-
-        if ("APPROVED".equalsIgnoreCase(
-                request.getStatus()
-        )) {
-
-            throw new RuntimeException(
-                    "Approved request cannot be rejected"
-            );
-        }
-
-
-        // -----------------------------------------------------
-        // Already rejected
-        // -----------------------------------------------------
-
-        if ("REJECTED".equalsIgnoreCase(
-                request.getStatus()
-        )) {
-
-            throw new RuntimeException(
-                    "Payment request already rejected"
-            );
-        }
-
-
-        // -----------------------------------------------------
-        // UPDATE STATUS
-        // -----------------------------------------------------
-
-        request.setStatus("REJECTED");
-
-        walletRequestRepo.save(request);
-
-
-        return "Payment request rejected";
-    }
+    // ===========================
+    // 🔐 SIGNATURE VERIFICATION
+    // ===========================
 }
