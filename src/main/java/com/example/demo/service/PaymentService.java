@@ -1,145 +1,243 @@
 package com.example.demo.service;
 
-import com.example.demo.dto.PaymentRequest;
-import com.example.demo.model.Transaction;
 import com.example.demo.model.User;
-import com.example.demo.repository.TransactionRepository;
+import com.example.demo.model.WalletRequest;
 import com.example.demo.repository.UserRepository;
-import com.razorpay.*;
+import com.example.demo.repository.WalletRequestRepository;
 
-import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 @Service
 public class PaymentService {
 
     @Autowired
-    private TransactionRepository transactionRepo;
-
-    @Autowired
     private UserRepository userRepo;
 
-    // 🔐 Move keys to application.properties
-    @Value("${razorpay.key}")
-    private String KEY;
+    @Autowired
+    private WalletRequestRepository walletRequestRepo;
 
-    @Value("${razorpay.secret}")
-    private String SECRET;
 
-    // 🔥 store orderId → amount mapping (temporary in-memory)
-    private Map<String, Double> orderAmountMap = new HashMap<>();
+    // =========================================================
+    // CREATE MANUAL PAYMENT REQUEST
+    // =========================================================
 
-    // ===========================
-    // 🔥 CREATE ORDER
-    // ===========================
-    public String createOrder(double amount) throws Exception {
+    public WalletRequest createPaymentRequest(
+            String username,
+            double amount,
+            String utr
+    ) {
 
-        RazorpayClient client = new RazorpayClient(KEY, SECRET);
+        // -----------------------------------------------------
+        // Validate amount
+        // -----------------------------------------------------
 
-        JSONObject options = new JSONObject();
-        options.put("amount", (int) (amount * 100)); // paisa
-        options.put("currency", "INR");
+        if (amount <= 0) {
+            throw new RuntimeException("Invalid amount");
+        }
 
-        String receiptId = "txn_" + System.currentTimeMillis();
-        options.put("receipt", receiptId);
 
-        Order order = client.orders.create(options);
+        // -----------------------------------------------------
+        // Validate UTR
+        // -----------------------------------------------------
 
-        // ✅ store amount against orderId
-        orderAmountMap.put(order.get("id"), amount);
+        if (utr == null || utr.trim().isEmpty()) {
+            throw new RuntimeException("UTR is required");
+        }
 
-        return order.toString();
+
+        // -----------------------------------------------------
+        // Get user
+        // -----------------------------------------------------
+
+        User user = userRepo.findByUsername(username)
+                .orElseThrow(
+                        () -> new RuntimeException("User not found")
+                );
+
+
+        // -----------------------------------------------------
+        // Create request
+        // -----------------------------------------------------
+
+        WalletRequest request = new WalletRequest();
+
+        request.setUsername(user.getUsername());
+        request.setAmount(amount);
+        request.setUtr(utr.trim());
+        request.setStatus("PENDING");
+
+
+        return walletRequestRepo.save(request);
     }
 
-    // ===========================
-    // 🔥 VERIFY PAYMENT
-    // ===========================
+
+    // =========================================================
+    // GET USER PAYMENT REQUESTS
+    // =========================================================
+
+    public List<WalletRequest> getUserRequests(
+            String username
+    ) {
+
+        return walletRequestRepo
+                .findByUsernameOrderByIdDesc(username);
+    }
+
+
+    // =========================================================
+    // GET ALL PAYMENT REQUESTS - ADMIN
+    // =========================================================
+
+    public List<WalletRequest> getAllRequests() {
+
+        return walletRequestRepo.findAllByOrderByIdDesc();
+    }
+
+
+    // =========================================================
+    // APPROVE PAYMENT REQUEST - ADMIN
+    // =========================================================
+
     @Transactional
-    public String verifyPayment(PaymentRequest req, String username) {
-    	System.out.println("VERIFY API HIT 🔥");
+    public String approveRequest(Long requestId) {
 
-        // 🔐 1. VERIFY SIGNATURE
-        boolean isValid = verifySignature(
-                req.getRazorpayOrderId(),
-                req.getRazorpayPaymentId(),
-                req.getRazorpaySignature()
-        );
+        WalletRequest request =
+                walletRequestRepo.findById(requestId)
+                        .orElseThrow(
+                                () -> new RuntimeException(
+                                        "Payment request not found"
+                                )
+                        );
 
-        if (!isValid) {
-            throw new RuntimeException("Invalid payment ❌");
+
+        // -----------------------------------------------------
+        // Prevent duplicate approval
+        // -----------------------------------------------------
+
+        if ("APPROVED".equalsIgnoreCase(
+                request.getStatus()
+        )) {
+
+            throw new RuntimeException(
+                    "Payment request already approved"
+            );
         }
 
-        // 👤 2. GET USER
-        User user = userRepo.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // 💰 3. GET REAL AMOUNT
-        Double amount = orderAmountMap.get(req.getRazorpayOrderId());
+        // -----------------------------------------------------
+        // Don't approve rejected request
+        // -----------------------------------------------------
 
-        if (amount == null) {
-            throw new RuntimeException("Amount not found for order ❌");
+        if ("REJECTED".equalsIgnoreCase(
+                request.getStatus()
+        )) {
+
+            throw new RuntimeException(
+                    "Rejected request cannot be approved"
+            );
         }
 
 
-        // 💰 4. UPDATE BALANCE
-        user.setBalance(user.getBalance() + amount);
+        // -----------------------------------------------------
+        // Get user
+        // -----------------------------------------------------
+
+        User user =
+                userRepo.findByUsername(
+                        request.getUsername()
+                )
+                .orElseThrow(
+                        () -> new RuntimeException(
+                                "User not found"
+                        )
+                );
+
+
+        // -----------------------------------------------------
+        // CREDIT WALLET
+        // -----------------------------------------------------
+
+        double oldBalance =
+                user.getBalance();
+
+        double newBalance =
+                oldBalance + request.getAmount();
+
+        user.setBalance(newBalance);
+
         userRepo.save(user);
 
-        // 🧾 5. SAVE TRANSACTION
-        Transaction txn = new Transaction();
-        txn.setUsername(username);
-        txn.setAmount(amount);
-        txn.setType("CREDIT");
-        txn.setStatus("SUCCESS");
-        txn.setDescription("Razorpay payment");
 
-        transactionRepo.save(txn);
+        // -----------------------------------------------------
+        // UPDATE REQUEST STATUS
+        // -----------------------------------------------------
 
-        // 🧹 optional cleanup
-//        orderAmountMap.remove(req.getRazorpayOrderId());
+        request.setStatus("APPROVED");
 
-        return "Payment verified & wallet updated";
+        walletRequestRepo.save(request);
+
+
+        return "Payment request approved and wallet credited";
     }
 
-    // ===========================
-    // 🔐 SIGNATURE VERIFICATION
-    // ===========================
-    private boolean verifySignature(String orderId, String paymentId, String signature) {
-        try {
-            String data = orderId + "|" + paymentId;
 
-            Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
-            SecretKeySpec secret_key = new SecretKeySpec(SECRET.getBytes(), "HmacSHA256");
-            sha256_HMAC.init(secret_key);
+    // =========================================================
+    // REJECT PAYMENT REQUEST - ADMIN
+    // =========================================================
 
-            byte[] hash = sha256_HMAC.doFinal(data.getBytes());
+    @Transactional
+    public String rejectRequest(Long requestId) {
 
-            // 🔥 CONVERT TO HEX (NOT BASE64)
-            StringBuilder hex = new StringBuilder(2 * hash.length);
-            for (byte b : hash) {
-                String hexByte = Integer.toHexString(0xff & b);
-                if (hexByte.length() == 1) hex.append('0');
-                hex.append(hexByte);
-            }
+        WalletRequest request =
+                walletRequestRepo.findById(requestId)
+                        .orElseThrow(
+                                () -> new RuntimeException(
+                                        "Payment request not found"
+                                )
+                        );
 
-            String generatedSignature = hex.toString();
 
-            System.out.println("EXPECTED: " + signature);
-            System.out.println("GENERATED: " + generatedSignature);
+        // -----------------------------------------------------
+        // Prevent changing approved request
+        // -----------------------------------------------------
 
-            return generatedSignature.equals(signature);
+        if ("APPROVED".equalsIgnoreCase(
+                request.getStatus()
+        )) {
 
-        } catch (Exception e) {
-            throw new RuntimeException("Signature verification failed");
+            throw new RuntimeException(
+                    "Approved request cannot be rejected"
+            );
         }
+
+
+        // -----------------------------------------------------
+        // Already rejected
+        // -----------------------------------------------------
+
+        if ("REJECTED".equalsIgnoreCase(
+                request.getStatus()
+        )) {
+
+            throw new RuntimeException(
+                    "Payment request already rejected"
+            );
+        }
+
+
+        // -----------------------------------------------------
+        // UPDATE STATUS
+        // -----------------------------------------------------
+
+        request.setStatus("REJECTED");
+
+        walletRequestRepo.save(request);
+
+
+        return "Payment request rejected";
     }
 }
