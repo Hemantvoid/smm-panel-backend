@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import org.springframework.transaction.annotation.Transactional;
 import com.example.demo.model.ApiLog;
 import com.example.demo.model.OrderEntity;
 import com.example.demo.model.Provider;
@@ -144,6 +145,7 @@ public class AdminController {
     // ❌ DELETE SERVICE
     // =========================
     @DeleteMapping("/providers/{id}")
+    @Transactional
     public String deleteProvider(@PathVariable Long id) {
 
         Provider provider = providerRepo.findById(id)
