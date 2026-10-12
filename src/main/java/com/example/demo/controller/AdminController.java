@@ -144,33 +144,58 @@ public class AdminController {
     // =========================
     // ❌ DELETE SERVICE
     // =========================
-    @DeleteMapping("/providers/{id}")
-    @Transactional
-    public String deleteProvider(@PathVariable Long id) {
+    
+@DeleteMapping("/providers/{id}")
+@Transactional
+public ResponseEntity<?> deleteProvider(@PathVariable Long id) {
 
-        Provider provider = providerRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Provider not found"));
-
-        // Pending orders check
-        List<OrderEntity> pendingOrders = orderRepo.findByProviderAndStatusIn(
-                provider,
-                List.of("PENDING", "PROCESSING", "UNKNOWN")
+    Provider provider = providerRepo.findById(id)
+        .orElseThrow(() ->
+            new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "Provider not found"
+            )
         );
 
-        if (!pendingOrders.isEmpty()) {
-            throw new RuntimeException(
-                    "Provider has pending orders. Delete not allowed."
-            );
-        }
+    List<OrderEntity> pendingOrders =
+        orderRepo.findByProviderAndStatusIn(
+            provider,
+            List.of("PENDING", "PROCESSING", "UNKNOWN")
+        );
 
-        // Delete services
-        serviceRepo.deleteByProvider(provider);
-
-        // Delete provider
-        providerRepo.delete(provider);
-
-        return "Provider deleted successfully";
+    if (!pendingOrders.isEmpty()) {
+        throw new ResponseStatusException(
+            HttpStatus.CONFLICT,
+            "Provider has pending orders. Resolve them before deleting."
+        );
     }
+
+    List<ServiceEntity> services =
+        serviceRepo.findAllByProvider(provider);
+
+    boolean hasOrderHistory = services.stream()
+        .anyMatch(orderRepo::existsByService);
+
+    if (hasOrderHistory) {
+        services.forEach(service -> service.setActive(false));
+        serviceRepo.saveAll(services);
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+            java.util.Map.of(
+                "message",
+                "Provider has historical orders. Its services were "
+                + "deactivated, but the provider was not deleted."
+            )
+        );
+    }
+
+    serviceRepo.deleteByProvider(provider);
+    providerRepo.delete(provider);
+
+    return ResponseEntity.ok(
+        java.util.Map.of("message", "Provider deleted successfully")
+    );
+}
+
 
     // =========================
     // 📊 DASHBOARD
