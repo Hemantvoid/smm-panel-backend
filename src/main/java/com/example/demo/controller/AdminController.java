@@ -14,6 +14,9 @@ import com.example.demo.service.AutoMappingService;
 import com.example.demo.service.OrderSyncService;
 import com.example.demo.service.ServiceService;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
