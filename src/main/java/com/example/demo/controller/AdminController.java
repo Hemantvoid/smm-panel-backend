@@ -13,6 +13,8 @@ import com.example.demo.service.AdminService;
 import com.example.demo.service.AutoMappingService;
 import com.example.demo.service.OrderSyncService;
 import com.example.demo.service.ServiceService;
+import com.example.demo.model.ServiceProviderMapping;
+import com.example.demo.repository.ServiceProviderMappingRepository;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
