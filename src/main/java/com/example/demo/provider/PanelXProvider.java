@@ -194,33 +194,56 @@ public class PanelXProvider implements SmmProvider {
     // ============================
     // 📦 FETCH SERVICES
     // ============================
-    @Override
-    public List<Map<String, Object>> fetchServices(String apiKey, String apiUrl) {
+   
+@Override
+public List<Map<String, Object>> fetchServices(
+        String apiKey, String apiUrl) {
 
-        String url = apiUrl;
+    String url = apiUrl.trim().replaceAll("\\s+", "");
 
-        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-        body.add("key", apiKey);
-        body.add("action", "services");
+    MultiValueMap<String, String> body =
+            new LinkedMultiValueMap<>();
+    body.add("key", apiKey);
+    body.add("action", "services");
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
-        HttpEntity<MultiValueMap<String, String>> request =
-                new HttpEntity<>(body, headers);
+    HttpEntity<MultiValueMap<String, String>> request =
+            new HttpEntity<>(body, headers);
 
-        try {
-            ResponseEntity<List> response =
-                    restTemplate.postForEntity(url, request, List.class);
+    try {
+        ResponseEntity<String> response =
+                restTemplate.postForEntity(
+                        url, request, String.class);
 
-            return response.getBody();
+        String responseBody = response.getBody();
 
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to fetch services: " + e.getMessage());
+        System.out.println("PROVIDER SERVICES HTTP STATUS: "
+                + response.getStatusCode());
+        System.out.println("PROVIDER SERVICES RESPONSE: "
+                + responseBody);
+
+        if (responseBody == null || responseBody.isBlank()) {
+            throw new RuntimeException("Provider returned an empty response");
         }
-    }
 
-    // ============================
+        ObjectMapper mapper = new ObjectMapper();
+
+        return mapper.readValue(
+                responseBody,
+                new com.fasterxml.jackson.core.type.TypeReference<
+                        List<Map<String, Object>>>() {}
+        );
+
+    } catch (Exception e) {
+        System.err.println("FETCH SERVICES ERROR: "
+                + e.getClass().getName() + " - " + e.getMessage());
+        throw new RuntimeException(
+                "Failed to fetch services: " + e.getMessage(), e);
+    }
+}
+==================
     // 🔁 ALT STATUS (optional)
     // ============================
 }
