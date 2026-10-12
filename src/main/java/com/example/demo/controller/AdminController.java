@@ -61,32 +61,34 @@ public class AdminController {
     // =========================
     // ➕ ADD PROVIDER
     // =========================
-    @PostMapping("/providers")
-    public Provider addProvider(@RequestBody Provider provider) {
+    
+@PostMapping("/providers")
+public Provider addProvider(@RequestBody Provider provider) {
 
-        // 🔥 sanitize input (IMPORTANT)
-        provider.setApiUrl(
-            provider.getApiUrl().trim().replaceAll("\\s+", "")
-        );
+    provider.setApiUrl(
+        provider.getApiUrl().trim().replaceAll("\\s+", "")
+    );
 
-        provider.setApiKey(
-            provider.getApiKey().trim()
-        );
+    provider.setApiKey(provider.getApiKey().trim());
+    provider.setName(provider.getName().trim());
 
-        provider.setName(
-            provider.getName().trim()
-        );
+    // Newly added providers should be active
+    provider.setStatus(true);
 
-        return providerRepo.save(provider);
-    }
+    return providerRepo.save(provider);
+}
 
     // =========================
     // 📡 GET ALL PROVIDERS
     // =========================
-    @GetMapping("/providers")
-    public List<Provider> getProviders() {
-    return providerRepo.findByStatusTrue();
-    }
+   @GetMapping("/services")
+public List<ServiceEntity> getServices() {
+    return serviceRepo.findByActiveTrue()
+        .stream()
+        .filter(service -> service.getProvider() != null
+            && service.getProvider().isStatus())
+        .toList();
+}
     
     @PutMapping("/services/reset-pricing")
     public String resetPricing() {
