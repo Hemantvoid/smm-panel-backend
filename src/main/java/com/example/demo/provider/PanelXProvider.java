@@ -2,7 +2,6 @@ package com.example.demo.provider;
 
 import com.example.demo.dto.OrderRequest;
 import com.example.demo.dto.OrderResponse;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
@@ -18,7 +17,6 @@ import java.util.List;
 import java.util.Map;
 
 @Service("panelX")
-@Component
 public class PanelXProvider implements SmmProvider {
 
     @Autowired
@@ -243,7 +241,4 @@ public List<Map<String, Object>> fetchServices(
                 "Failed to fetch services: " + e.getMessage(), e);
     }
 }
-==================
-    // 🔁 ALT STATUS (optional)
-    // ============================
 }
