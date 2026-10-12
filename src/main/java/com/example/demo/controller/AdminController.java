@@ -85,8 +85,8 @@ public class AdminController {
     // =========================
     @GetMapping("/providers")
     public List<Provider> getProviders() {
-    return providerRepo.findAll();
-}
+    return providerRepo.findByStatusTrue();
+    }
     
     @PutMapping("/services/reset-pricing")
     public String resetPricing() {
