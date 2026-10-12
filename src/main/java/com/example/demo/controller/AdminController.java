@@ -78,17 +78,24 @@ public Provider addProvider(@RequestBody Provider provider) {
     return providerRepo.save(provider);
 }
 
+    @GetMapping("/providers")
+public List<Provider> getProviders() {
+    return providerRepo.findByStatusTrue();
+}
+
     // =========================
     // 📡 GET ALL PROVIDERS
     // =========================
    @GetMapping("/services")
-public List<ServiceEntity> getServices() {
+    public List<ServiceEntity> getServices() {
     return serviceRepo.findByActiveTrue()
         .stream()
-        .filter(service -> service.getProvider() != null
-            && service.getProvider().isStatus())
+        .filter(service ->
+            service.getProvider() != null
+            && service.getProvider().isStatus()
+        )
         .toList();
-}
+    }
     
     @PutMapping("/services/reset-pricing")
     public String resetPricing() {
@@ -114,14 +121,7 @@ public List<ServiceEntity> getServices() {
         syncService.syncProviderServices(providerId);
         return "Services synced successfully";
     }
-
-    // =========================
-    // 📦 GET ALL SERVICES
-    // =========================
-    @GetMapping("/services")
-    public List<ServiceEntity> getServices() {
-        return serviceRepo.findAll();
-    }
+    
 
     // =========================
     // ✏️ UPDATE MARGIN (MAIN CONTROL)
