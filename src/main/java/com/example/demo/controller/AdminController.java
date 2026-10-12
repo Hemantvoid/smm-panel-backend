@@ -51,6 +51,9 @@ public class AdminController {
     
     @Autowired
     private ApiLogRepository apiLogRepo;
+
+    @Autowired
+    private ServiceProviderMappingRepository mappingRepo;
     
 
     // =========================
@@ -148,16 +151,15 @@ public class AdminController {
     // ❌ DELETE SERVICE
     // =========================
     
+
 @DeleteMapping("/providers/{id}")
 @Transactional
 public ResponseEntity<?> deleteProvider(@PathVariable Long id) {
 
     Provider provider = providerRepo.findById(id)
-        .orElseThrow(() ->
-            new ResponseStatusException(
-                HttpStatus.NOT_FOUND, "Provider not found"
-            )
-        );
+        .orElseThrow(() -> new ResponseStatusException(
+            HttpStatus.NOT_FOUND, "Provider not found"
+        ));
 
     List<OrderEntity> pendingOrders =
         orderRepo.findByProviderAndStatusIn(
@@ -166,28 +168,34 @@ public ResponseEntity<?> deleteProvider(@PathVariable Long id) {
         );
 
     if (!pendingOrders.isEmpty()) {
-        throw new ResponseStatusException(
-            HttpStatus.CONFLICT,
-            "Provider has pending orders. Resolve them before deleting."
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+            Map.of("message",
+                "Provider has pending orders. Resolve them first.")
         );
     }
 
     List<ServiceEntity> services =
         serviceRepo.findByProvider(provider);
 
-    boolean hasOrderHistory = services.stream()
-        .anyMatch(orderRepo::existsByService);
+    boolean hasOrderHistory =
+        services.stream().anyMatch(orderRepo::existsByService);
 
     if (hasOrderHistory) {
         services.forEach(service -> service.setActive(false));
         serviceRepo.saveAll(services);
 
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(
-            java.util.Map.of(
-                "message",
-                "Provider has historical orders. Its services were "
-                + "deactivated, but the provider was not deleted."
-            )
+        List<ServiceProviderMapping> mappings =
+            mappingRepo.findByProvider(provider);
+
+        mappings.forEach(mapping -> mapping.setActive(false));
+        mappingRepo.saveAll(mappings);
+
+        provider.setStatus(false);
+        providerRepo.save(provider);
+
+        return ResponseEntity.ok(
+            Map.of("message",
+                "Provider deactivated. Historical orders preserved.")
         );
     }
 
@@ -195,7 +203,7 @@ public ResponseEntity<?> deleteProvider(@PathVariable Long id) {
     providerRepo.delete(provider);
 
     return ResponseEntity.ok(
-        java.util.Map.of("message", "Provider deleted successfully")
+        Map.of("message", "Provider deleted successfully")
     );
 }
 
