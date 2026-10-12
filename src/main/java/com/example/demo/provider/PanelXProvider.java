@@ -193,15 +193,17 @@ public class PanelXProvider implements SmmProvider {
     // 📦 FETCH SERVICES
     // ============================
    
+
 @Override
 public List<Map<String, Object>> fetchServices(
         String apiKey, String apiUrl) {
 
-    String url = apiUrl.trim().replaceAll("\\s+", "");
+    String url = apiUrl.trim();
+    String key = apiKey.trim();
 
     MultiValueMap<String, String> body =
             new LinkedMultiValueMap<>();
-    body.add("key", apiKey);
+    body.add("key", key);
     body.add("action", "services");
 
     HttpHeaders headers = new HttpHeaders();
@@ -217,16 +219,23 @@ public List<Map<String, Object>> fetchServices(
 
         String responseBody = response.getBody();
 
-        System.out.println("PROVIDER SERVICES HTTP STATUS: "
+        System.out.println("SMMNEXA API URL: " + url);
+        System.out.println("SMMNEXA HTTP STATUS: "
                 + response.getStatusCode());
-        System.out.println("PROVIDER SERVICES RESPONSE: "
+        System.out.println("SMMNEXA RESPONSE: "
                 + responseBody);
 
         if (responseBody == null || responseBody.isBlank()) {
-            throw new RuntimeException("Provider returned an empty response");
+            throw new RuntimeException(
+                    "Provider returned an empty response");
         }
 
         ObjectMapper mapper = new ObjectMapper();
+
+        if (!mapper.readTree(responseBody).isArray()) {
+            throw new RuntimeException(
+                    "Provider API error: " + responseBody);
+        }
 
         return mapper.readValue(
                 responseBody,
@@ -235,10 +244,12 @@ public List<Map<String, Object>> fetchServices(
         );
 
     } catch (Exception e) {
-        System.err.println("FETCH SERVICES ERROR: "
-                + e.getClass().getName() + " - " + e.getMessage());
+        System.err.println("SMMNEXA FETCH ERROR: "
+                + e.getMessage());
+
         throw new RuntimeException(
                 "Failed to fetch services: " + e.getMessage(), e);
     }
+}
 }
 }
