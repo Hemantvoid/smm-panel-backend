@@ -170,7 +170,7 @@ public ResponseEntity<?> deleteProvider(@PathVariable Long id) {
     }
 
     List<ServiceEntity> services =
-        serviceRepo.findAllByProvider(provider);
+        serviceRepo.findByProvider(provider);
 
     boolean hasOrderHistory = services.stream()
         .anyMatch(orderRepo::existsByService);
